@@ -9,9 +9,13 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -30,7 +34,9 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: kavii.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_ce4a89d0ca9f4a2780b11315c689ed74 }}/kavii/nodejs-cache:${{ github.sha }}
+        tags: kavii.azurecr.io/kavii/nodejs-cache:${{ github.sha }}
+        cache-from: type=registry,ref=kavii.azurecr.io/kavii/nodejs-cache:cache
+        cache-to: type=inline
         file: ./Dockerfile
 
   deploy:
@@ -48,4 +54,4 @@ jobs:
         app-name: 'kavii'
         slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_540997ac531e4e2997a3ae2eb44decfa }}
-        images: 'kavii.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_ce4a89d0ca9f4a2780b11315c689ed74 }}/kavii/nodejs-cache:${{ github.sha }}'
+        images: 'kavii.azurecr.io/kavii/nodejs-cache:${{ github.sha }}'
