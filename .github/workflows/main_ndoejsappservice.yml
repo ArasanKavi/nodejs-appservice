@@ -35,7 +35,7 @@ jobs:
       with:
         push: true
         tags: nodejsappservice.azurecr.io/nodejsappservice:${{ github.sha }}
-        cache-from: type=registry,ref=nodejsappservice.azurecr.io/nodejsappservice:cache
+        cache-from: type=registry,mode=max,ref=nodejsappservice.azurecr.io/nodejsappservice:cache
         cache-to: type=inline
         file: ./Dockerfile
 
