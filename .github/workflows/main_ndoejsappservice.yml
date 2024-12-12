@@ -15,29 +15,42 @@ concurrency:
 
 jobs:
   build:
-    runs-on: 'ubuntu-latest'
-
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: <your-acr-name>.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-    - name: Log in to registry
-      uses: docker/login-action@v2
-      with:
-        registry: https://nodejsappservice.azurecr.io/
-        username: ${{ secrets.AzureAppService_ContainerUsername_b164cea1410640f984c692f4ab881e9d }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_58885d1c1ad042bc8433295aa0f2f154 }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Build and push container image to registry
-      uses: docker/build-push-action@v3
-      with:
-        push: true
-        tags: nodejsappservice.azurecr.io/nodejsappservice:${{ github.sha }}
-        cache-from: type=registry,mode=max,ref=nodejsappservice.azurecr.io/nodejsappservice:cache
-        cache-to: type=inline
-        file: ./Dockerfile
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build and push Docker images to ACR
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            nodejsappservice.azurecr.io/nodejsappservice:latest
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache
+            type=registry,ref=nodejsappservice.azurecr.io/nodejsappservice:buildcache
+          cache-to: |
+            type=local,dest=/tmp/.buildx-cache,new=true
+            type=registry,ref=nodejsappservice.azurecr.io/nodejsappservice:buildcache,mode=max
 
   deploy:
     runs-on: ubuntu-latest
